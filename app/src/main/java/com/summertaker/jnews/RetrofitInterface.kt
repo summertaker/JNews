@@ -7,7 +7,7 @@ import retrofit2.http.Query
 interface RetrofitInterface {
 
     @GET("youtube_json.php")
-    fun requestSearchImage(
+    fun requestArticles(
         @Query("id") id: Int,
         @Query("title") title: String
     ): Call<ArticleModel>

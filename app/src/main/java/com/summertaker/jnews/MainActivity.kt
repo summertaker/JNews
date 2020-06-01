@@ -1,39 +1,60 @@
 package com.summertaker.jnews
 
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.net.NetworkCapabilities
-import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
-import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
+import android.widget.MediaController
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.recyclerview.widget.DividerItemDecoration
 import kotlinx.android.synthetic.main.activity_main.*
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 import java.util.*
 import kotlin.collections.ArrayList
-import android.net.ConnectivityManager as ConnectivityManager1
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), View.OnClickListener, DataInterface {
 
-    val tAg = ">> MainActivity"
+    private val logTag = Config.logPrefix + this.javaClass.simpleName
 
-    private val recordRequestCode = 1000
+    private val permissionRequestCode = 1000
 
-    var videos: ArrayList<Video> = ArrayList()
+    private var mMediaController: MediaController? = null
+    private var mPlayingCount = 0
+
+    var mVideos: ArrayList<Video> = ArrayList()
+    var mArticles: ArrayList<Article> = ArrayList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
         checkPermissions()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        val inflater = menuInflater
+        inflater.inflate(R.menu.main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.shuffle -> {
+                doShuffle()
+                return true
+            }
+            R.id.download -> {
+                goDownload()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     private fun checkPermissions() {
@@ -43,7 +64,7 @@ class MainActivity : AppCompatActivity() {
         if (permission != PackageManager.PERMISSION_GRANTED) {
             requestPermission()
         } else {
-            getLocalData()
+            initUI()
         }
     }
 
@@ -51,7 +72,7 @@ class MainActivity : AppCompatActivity() {
         ActivityCompat.requestPermissions(
             this,
             arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-            recordRequestCode
+            permissionRequestCode
         )
     }
 
@@ -61,117 +82,158 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         when (requestCode) {
-            recordRequestCode -> {
+            permissionRequestCode -> {
                 if (grantResults.isEmpty() || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(this, getString(R.string.permission_denied), Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, getString(R.string.permission_denied), Toast.LENGTH_LONG)
+                        .show()
                 } else {
-                    getLocalData()
+                    initUI()
                 }
                 return
             }
         }
     }
 
-    private fun getLocalData() {
-        /*val cursor = contentResolver.query(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            null,
-            null,
-            null,
-            MediaStore.Images.ImageColumns.DATE_TAKEN + " DESC"
-        )*/
-        val cursor = contentResolver.query(
-            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-            null,
-            null,
-            null,
-            MediaStore.Video.VideoColumns.DISPLAY_NAME
-        )
-
-        if (cursor != null) {
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
-            val relativePathColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Video.Media.RELATIVE_PATH)
-            val displayNameColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
-            while (cursor.moveToNext()) {
-                val id = cursor.getLong(idColumn)
-                val displayName = cursor.getString(displayNameColumn)
-                val relativePath = cursor.getString(relativePathColumn)
-                val ok = relativePath.contains(getString(R.string.japanese), ignoreCase = false)
-                if (ok) {
-                        val contentUri =
-                            Uri.withAppendedPath(
-                                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                                id.toString()
-                            )
-                        //Log.e(tAg, relativePath)
-                        //Log.e(tAg, "- $contentUri")
-                        //Log.e(tAg, "- $displayName")
-
-                        val video = Video(id, contentUri.toString(), relativePath, displayName)
-                        videos.add(video)
-                    }
+    private fun initUI() {
+        mMediaController = MediaController(this)
+        videoView.setMediaController(mMediaController)
+        videoView.setOnPreparedListener {
+            videoView.start()
+            mMediaController!!.setAnchorView(videoView) // start() 할 때 지정해야 함
+        }
+        videoView.setOnCompletionListener {
+            mPlayingCount++;
+            if (mPlayingCount >= mArticles.size) {
+                mPlayingCount = 0;
             }
-            cursor.close()
+            startPlay()
+            videoView.resume();
+        }
+        videoView.setOnErrorListener { _, _, _ ->
+            Toast.makeText(this@MainActivity, "videoView.onError()", Toast.LENGTH_SHORT).show()
+            false
         }
 
-        getRemoteData()
+        videoView.setOnClickListener(View.OnClickListener {
+            val video = mVideos[mPlayingCount]
+            Toast.makeText(this@MainActivity, video.displayName, Toast.LENGTH_SHORT).show()
+            //val uri = Uri.parse(video.getMediaUri())
+            AudioApplication.getInstance().serviceInterface.play(video.contentUri)
+        })
+
+        loMiniPlayer.setOnClickListener(this)
+        btPlayPause.setOnClickListener(this)
+        btForward.setOnClickListener(this)
+        btRewind.setOnClickListener(this)
+
+        registerBroadcast()
     }
 
-    private fun isInternetConnected(context: Context): Boolean {
-        var result = false
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager1
-        val capabilities = cm.getNetworkCapabilities(cm.activeNetwork)
-        if (capabilities != null) {
-            if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                result = true
-            } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
-                result = true
+    override fun onClick(v: View?) {
+        when (v!!.id) {
+            R.id.loMiniPlayer -> {
+            }
+            R.id.btRewind -> // 이전 곡
+                AudioApplication.getInstance().serviceInterface.rewind()
+            R.id.btPlayPause -> { // 재생 또는 일시 정지
+                //Toast.makeText(this, "Play or Pause", Toast.LENGTH_SHORT).show()
+                AudioApplication.getInstance().serviceInterface.togglePlay()
+            }
+            R.id.btForward -> // 다음 곡
+                AudioApplication.getInstance().serviceInterface.forward()
+        }
+    }
+
+    private val mBroadcastReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            //Toast.makeText(this@MainActivity, intent.action, Toast.LENGTH_SHORT).show()
+            when (intent.action) {
+                BroadcastActions.CREATED -> {
+                    getLocalData()
+                }
+                BroadcastActions.PREPARED -> {
+                    tvTitle.text = mVideos[mPlayingCount].displayName
+                }
+                BroadcastActions.PLAY_STATE_CHANGED
+                -> {
+                    updateUI()
+                }
             }
         }
-        return result
     }
 
-    private fun getRemoteData() {
-        if (isInternetConnected(this)) {
-            RetrofitFactory.getService().requestSearchImage(id = 0, title = "").enqueue(object :
-                Callback<ArticleModel> {
-                override fun onFailure(call: Call<ArticleModel>, t: Throwable) {
-                    Log.e(tAg, t.message.toString())
-                }
+    private fun registerBroadcast() {
+        //Toast.makeText(this, "registerBroadcast()", Toast.LENGTH_SHORT).show()
+        val filter = IntentFilter()
+        filter.addAction(BroadcastActions.CREATED)
+        filter.addAction(BroadcastActions.PREPARED)
+        filter.addAction(BroadcastActions.PLAY_STATE_CHANGED)
+        registerReceiver(mBroadcastReceiver, filter)
+    }
 
-                override fun onResponse(call: Call<ArticleModel>, response: Response<ArticleModel>) {
-                    if (response.isSuccessful) {
-                        //Log.e(TAG, response.body().toString())
-                        val body = response.body()
-                        body?.let {
-                            for (article in it.articles) {
-                                val arr = article.file.split("/") // "upload/abc.mp4"
-                                val file = arr[arr.size - 1]
-                                for (video in videos) {
-                                    if (file == video.displayName) {
-                                        article.contentUri = video.contentUri
-                                        break
-                                    }
-                                }
-                            }
-                            setAdapter(it.articles)
-                        }
-                    } else {
-                        Log.e(tAg, getString(R.string.response_unsuccessful))
-                    }
-                }
-            })
+    private fun unregisterBroadcast() {
+        unregisterReceiver(mBroadcastReceiver)
+    }
+
+    private fun startPlay() {
+        //AudioApplication.getInstance().getServiceInterface().setPlayList(getAudioIds()); // 재생목록등록
+
+        //Article article =  mArticles.get(mPlayingCount);
+        //Toast.makeText(MainActivity.this, article.getTitleKo(), Toast.LENGTH_SHORT).show();
+        //String mediaUri = article.getMediaUri();
+        val video: Video = mVideos[mPlayingCount]
+        Toast.makeText(this, video.displayName, Toast.LENGTH_SHORT).show()
+
+        //val uri = Uri.parse(video.contentUri)
+        AudioApplication.getInstance().serviceInterface.play(video.contentUri)
+    }
+
+    private fun doShuffle() {
+        if (mArticles.size > 1) {
+            videoView.stopPlayback()
+            val seed = System.nanoTime()
+            mArticles.shuffle(Random(seed))
+            startPlay()
+        }
+    }
+
+    private fun updateUI() {
+        if (AudioApplication.getInstance().serviceInterface.isPlaying) {
+            btPlayPause.setImageResource(R.drawable.ic_pause)
         } else {
-            Toast.makeText(this, getString(R.string.no_inertnet_connection), Toast.LENGTH_LONG).show()
+            btPlayPause.setImageResource(R.drawable.ic_play_arrow)
         }
+
+        //AudioAdapter.AudioItem audioItem = AudioApplication.getInstance().getServiceInterface().getAudioItem();
+        //if (audioItem != null) {
+        //    Uri albumArtUri = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), audioItem.mAlbumId);
+        //    Picasso.with(getApplicationContext()).load(albumArtUri).error(R.drawable.empty_albumart).into(mImgAlbumArt);
+        //    mTxtTitle.setText(audioItem.mTitle);
+        //} else {
+        //    mImgAlbumArt.setImageResource(R.drawable.empty_albumart);
+        //    mTxtTitle.setText("재생중인 음악이 없습니다.");
+        //}
     }
 
-    private fun setAdapter(articles: ArrayList<Article>) {
-        val adapter = RecyclerAdapter(articles, this)
-        recyclerView.adapter = adapter
-        recyclerView.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
+    private fun getLocalData() {
+        val dataManager = DataManager(this@MainActivity, this@MainActivity)
+        dataManager.getLocalData()
     }
 
+    override fun getLocalDataCallback(videos: ArrayList<Video>) {
+        //Toast.makeText(this, "videos.size = " + videos.size, Toast.LENGTH_SHORT).show();
+        mVideos = videos
+        startPlay()
+    }
+
+    private fun goDownload() {
+        val intent = Intent(this, ArticlesActivity::class.java)
+        startActivity(intent)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        //Toast.makeText(MainActivity.this, "onDestroy()", Toast.LENGTH_SHORT).show();
+        unregisterBroadcast()
+    }
 }

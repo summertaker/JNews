@@ -1,8 +1,10 @@
 package com.summertaker.jnews
 
-data class Video (
-    val id: Long,
-    val contentUri: String,
-    val relativePath: String,
+import android.net.Uri
+
+data class Video(
+    var contentUri: Uri,
+    //val contentUri: String,
+    val filePath: String,
     val displayName: String
 )

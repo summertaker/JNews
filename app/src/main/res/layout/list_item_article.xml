@@ -10,36 +10,47 @@
     android:paddingBottom="15dp">
 
     <ImageView
-        android:id="@+id/thumbnail"
-        android:layout_width="140dp"
-        android:layout_height="79dp"
+        android:id="@+id/articleThumbnail"
+        android:layout_width="120dp"
+        android:layout_height="68dp"
         android:adjustViewBounds="true"
         android:contentDescription="@string/app_name"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/title"
+        android:id="@+id/articleTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
+        android:text="@string/title"
         android:textColor="@android:color/black"
         android:textSize="16sp"
-        android:text="@string/title"
+        app:layout_constraintEnd_toStartOf="@+id/btDownload"
+        app:layout_constraintStart_toEndOf="@id/articleThumbnail"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageButton
+        android:id="@+id/btDownload"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="5dp"
+        android:contentDescription="@string/download"
+        android:src="@drawable/ic_arrow_downward_black"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/thumbnail"
+        app:layout_constraintStart_toEndOf="@+id/articleTitle"
         app:layout_constraintTop_toTopOf="parent" />
 
     <ImageView
-        android:id="@+id/tick"
+        android:id="@+id/ivTick"
         android:layout_width="20dp"
         android:layout_height="20dp"
-        android:layout_marginStart="10dp"
         android:layout_marginTop="5dp"
         android:contentDescription="@string/app_name"
         android:src="@drawable/tick"
         android:visibility="gone"
-        app:layout_constraintStart_toEndOf="@id/thumbnail"
-        app:layout_constraintTop_toBottomOf="@id/title" />
+        app:layout_constraintStart_toStartOf="@id/btDownload"
+        app:layout_constraintEnd_toEndOf="@id/btDownload"
+        app:layout_constraintTop_toBottomOf="@id/btDownload" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

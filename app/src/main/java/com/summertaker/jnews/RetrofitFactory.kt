@@ -8,7 +8,7 @@ object RetrofitFactory {
 
     private val retrofit =
         Retrofit.Builder()
-            .baseUrl("http://summertaker.cafe24.com/reader/")
+            .baseUrl(Config.serverBaseUrl)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 }
