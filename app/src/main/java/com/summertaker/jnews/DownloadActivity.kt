@@ -18,10 +18,10 @@ class DownloadActivity : AppCompatActivity() {
 
     private val logTag = Config.logPrefix + this.javaClass.simpleName
 
-    private var mArticleId: String? = ""
+    private var mArticleId: String? = null
     private var mArticleTitle: String? = null
     private var mArticleFile: String? = null
-    private var mStorageFile: String? = null
+    private var mDisplayName: String? = null
 
     private var downloadId: Long = -1L
     private lateinit var downloadManager: DownloadManager
@@ -158,25 +158,25 @@ class DownloadActivity : AppCompatActivity() {
         //val localPath = getPrivateAlbumStorageDir()
         //if (localPath.isDirectory) {
         //val arr = mArticleFile.split("/")
-        val fileName = mArticleFile!!.substring(mArticleFile!!.lastIndexOf('/') + 1)
-        mStorageFile = Config.localDownloadSubPath + "/" + fileName
 
-        //val localFile = File(localPath, fileName) // 서브 디렉토리
-        //mStorageFile = fileName //localFile.toURI().toString()
+        mDisplayName = mArticleFile?.substring(mArticleFile!!.lastIndexOf('/') + 1)
+        val destinationName = Config.localDownloadSubPath + "/" + mDisplayName
+
+        //val localFile = File(Environment.DIRECTORY_MOVIES, mStorageFile.toString()) // 미완성
         //if (localFile.exists()) localFile.delete()
 
         //val encodedFileName: String = URLEncoder.encode(fileName, "utf-8")
-        val downloadUrl = Config.serverBaseUrl + mArticleFile
+        val downloadUrl = Config.remoteBaseUrl + mArticleFile
         //Log.d(tAg, ">> downloadPath: $downloadPath")
         //Log.d(tAg, ">> downloadFile: $downloadFile")
         //Log.d(tAg, ">> downloadUrl: $downloadUrl")
 
         val request = DownloadManager.Request(Uri.parse(downloadUrl))
             .setTitle(mArticleTitle)
-            //.setDescription(fileName)
+            .setDescription(mDisplayName)
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-            //.setDestinationUri(Uri.fromFile(localFile))
-            .setDestinationInExternalPublicDir(Environment.DIRECTORY_MOVIES, mStorageFile)
+            //.setDestinationUri(Uri.fromFile(mStorageFile))
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_MOVIES, destinationName)
             .setRequiresCharging(false)
             .setAllowedOverMetered(true)
             .setAllowedOverRoaming(true)
@@ -220,14 +220,17 @@ class DownloadActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        //Toast.makeText(this, "onDestroy()", Toast.LENGTH_SHORT).show()
         unregisterReceiver(onDownloadComplete)
     }
 
     private fun doFinish() {
+        //Toast.makeText(this, "onDestroy().mStorageFile: $mStorageFile", Toast.LENGTH_SHORT).show()
+        /*
+         * onDestory()에 아래 코드를 넣으면 putExtra() 값과 Activity.RESULT_OK 값을 이전 Activity에서 가져오지 못 한다.
+         */
         val intent = Intent(this, DownloadActivity::class.java)
         intent.putExtra("id", mArticleId)
-        intent.putExtra("storageFile", mStorageFile)
+        intent.putExtra("displayName", mDisplayName)
         setResult(Activity.RESULT_OK, intent)
         finish()
     }

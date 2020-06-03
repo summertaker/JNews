@@ -9,14 +9,14 @@ import kotlinx.android.synthetic.main.list_item_article.view.*
 
 class ArticlesAdapter(
     private val listener: ArticlesInterface,
-    private val articles: ArrayList<Article>
+    private val article: ArrayList<Article>
 ) :
     RecyclerView.Adapter<ArticlesAdapter.ViewHolder>() {
 
-    override fun getItemCount() = articles.size
+    override fun getItemCount() = article.size
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val article = articles[position]
+        val article = article[position]
         /*
         val myListener = View.OnClickListener {
             //Toast.makeText(it.context, article.title, Toast.LENGTH_SHORT).show()
@@ -28,7 +28,6 @@ class ArticlesAdapter(
             it.context.startActivity(intent)
         }
         */
-
         holder.apply {
             //bind(myListener, article)
             bind(article, listener)
@@ -44,35 +43,30 @@ class ArticlesAdapter(
     }
 
     class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
-
         private var view: View = v
 
         fun bind(
             article: Article,
             listener: ArticlesInterface
         ) {
-            if (view.articleThumbnail != null) {
+            if (view.thumbnail != null) {
                 val yid = article.yid
                 val url = "https://i.ytimg.com/vi/$yid/maxresdefault.jpg"
-                //Log.e(">>", "url: $url")
-                Glide.with(view.context).load(url).into(view.articleThumbnail)
+                Glide.with(view.context).load(url).into(view.thumbnail)
+                //view.thumbnail.setImageBitmap(article.thumbnail)
             }
 
-            view.articleTitle.text = article.title
+            view.title.text = article.title
 
-            if (article.storageFile == null) {
+            if (article.displayName == null) {
                 view.ivTick.visibility = View.GONE
-            } else {
-                view.ivTick.visibility = View.VISIBLE
-            }
-
-            if (article.file == null) {
-                view.btDownload.visibility = View.GONE
-            } else {
                 view.btDownload.visibility = View.VISIBLE
                 view.btDownload.setOnClickListener {
                     listener.onArticleSelected(article)
                 }
+            } else {
+                view.ivTick.visibility = View.VISIBLE
+                view.btDownload.visibility = View.GONE
             }
         }
 

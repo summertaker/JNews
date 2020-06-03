@@ -6,70 +6,89 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <VideoView
+    <!-- VideoView
         android:id="@+id/videoView"
         android:layout_width="match_parent"
         android:layout_height="240dp"
         android:layout_gravity="center"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" / -->
 
     <WebView
-        android:id="@+id/wvContentFu"
+        android:id="@+id/webView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         app:layout_constraintBottom_toTopOf="@+id/loMiniPlayer"
-        app:layout_constraintTop_toBottomOf="@id/videoView" />
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/loMiniPlayer"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="wrap_content"
         android:background="@android:color/darker_gray"
         android:gravity="center_vertical"
-        app:layout_constraintTop_toBottomOf="@id/wvContentFu"
+        android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
-        android:orientation="horizontal">
+        app:layout_constraintTop_toBottomOf="@id/webView">
 
         <ImageView
-            android:id="@+id/ivAlbumArt"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_marginStart="5dp"
-            android:scaleType="fitXY"
-            android:src="@drawable/album_art"/>
+            android:id="@+id/albumArt"
+            android:layout_width="100dp"
+            android:layout_height="56dp"
+            android:adjustViewBounds="true"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/app_name"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
-            android:id="@+id/tvTitle"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_marginStart="5dp"
-            android:layout_weight="1"
-            android:gravity="center_vertical"
-            android:text="@string/title"
-            android:textColor="@android:color/black"/>
+            android:id="@+id/track"
+            android:layout_width="70dp"
+            android:layout_height="wrap_content"
+            android:text="@string/track"
+            android:gravity="center"
+            android:textColor="@android:color/black"
+            app:layout_constraintEnd_toStartOf="@+id/rewind"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/albumArt"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ImageButton
-            android:id="@+id/btRewind"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:id="@+id/rewind"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:background="?attr/selectableItemBackground"
-            android:src="@drawable/ic_fast_rewind"/>
+            android:src="@drawable/ic_rewind"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/playPause"
+            app:layout_constraintStart_toEndOf="@+id/track"
+            app:layout_constraintTop_toTopOf="parent"
+            android:contentDescription="@string/rewind" />
 
         <ImageButton
-            android:id="@+id/btPlayPause"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:id="@+id/playPause"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:background="?attr/selectableItemBackground"
-            android:src="@drawable/ic_play_arrow"/>
+            android:src="@drawable/ic_play"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/forward"
+            app:layout_constraintStart_toEndOf="@+id/rewind"
+            app:layout_constraintTop_toTopOf="parent"
+            android:contentDescription="@string/play_or_pause" />
 
         <ImageButton
-            android:id="@+id/btForward"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:id="@+id/forward"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:background="?attr/selectableItemBackground"
-            android:src="@drawable/ic_fast_forward"/>
+            android:src="@drawable/ic_forward"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/playPause"
+            app:layout_constraintTop_toTopOf="parent"
+            android:contentDescription="@string/forward" />
 
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

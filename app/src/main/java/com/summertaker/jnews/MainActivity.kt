@@ -1,6 +1,7 @@
 package com.summertaker.jnews
 
 import android.Manifest
+import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -15,26 +16,51 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.bumptech.glide.Glide
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
 import kotlin.collections.ArrayList
 
-class MainActivity : AppCompatActivity(), View.OnClickListener, DataInterface {
+class MainActivity : AppCompatActivity(), View.OnClickListener {
 
-    private val logTag = Config.logPrefix + this.javaClass.simpleName
+    //private val logTag = Config.logPrefix + this.javaClass.simpleName
+
+    private val mContext: Context = this
+
+    private var mSavedPosition = 0
+    private val mSavedPositionKey = "playingPositionKey"
 
     private val permissionRequestCode = 1000
+
+    private var mVideos: ArrayList<Video> = ArrayList()
+    private var mArticles: ArrayList<Article> = ArrayList()
 
     private var mMediaController: MediaController? = null
     private var mPlayingCount = 0
 
-    var mVideos: ArrayList<Video> = ArrayList()
-    var mArticles: ArrayList<Article> = ArrayList()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // https://developer.android.com/guide/components/activities/activity-lifecycle?hl=ko
+        if (savedInstanceState != null) {
+            mSavedPosition = savedInstanceState.getInt(mSavedPositionKey, 0)
+        }
+
         setContentView(R.layout.activity_main)
         checkPermissions()
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        //Toast.makeText(this, "mSavedPosition: $mSavedPosition", Toast.LENGTH_SHORT).show()
+        mSavedPosition = savedInstanceState.getInt(mSavedPositionKey, 0)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        //Toast.makeText(this, "mSavedPosition: $mSavedPosition", Toast.LENGTH_SHORT).show()
+        outState.run {
+            putInt(mSavedPositionKey, mSavedPosition)
+        }
+        super.onSaveInstanceState(outState)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -55,6 +81,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, DataInterface {
             }
         }
         return super.onOptionsItemSelected(item)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateUI()
     }
 
     private fun checkPermissions() {
@@ -96,50 +127,46 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, DataInterface {
 
     private fun initUI() {
         mMediaController = MediaController(this)
-        videoView.setMediaController(mMediaController)
+
+        /*videoView.setMediaController(mMediaController)
         videoView.setOnPreparedListener {
             videoView.start()
             mMediaController!!.setAnchorView(videoView) // start() 할 때 지정해야 함
         }
         videoView.setOnCompletionListener {
-            mPlayingCount++;
+            mPlayingCount++
             if (mPlayingCount >= mArticles.size) {
-                mPlayingCount = 0;
+                mPlayingCount = 0
             }
             startPlay()
-            videoView.resume();
+            videoView.resume()
         }
-        videoView.setOnErrorListener { _, _, _ ->
-            Toast.makeText(this@MainActivity, "videoView.onError()", Toast.LENGTH_SHORT).show()
-            false
-        }
+        //videoView.setOnErrorListener { _, _, _ ->
+        //    Toast.makeText(this@MainActivity, "videoView.onError()", Toast.LENGTH_SHORT).show()
+        //    false
+        //}
 
-        videoView.setOnClickListener(View.OnClickListener {
-            val video = mVideos[mPlayingCount]
-            Toast.makeText(this@MainActivity, video.displayName, Toast.LENGTH_SHORT).show()
-            //val uri = Uri.parse(video.getMediaUri())
-            AudioApplication.getInstance().serviceInterface.play(video.contentUri)
-        })
+        videoView.setOnClickListener {
+            //val video = mVideos[mPlayingCount]
+            //Toast.makeText(this@MainActivity, video.displayName, Toast.LENGTH_SHORT).show()
+        }*/
 
-        loMiniPlayer.setOnClickListener(this)
-        btPlayPause.setOnClickListener(this)
-        btForward.setOnClickListener(this)
-        btRewind.setOnClickListener(this)
+        rewind.setOnClickListener(this)
+        playPause.setOnClickListener(this)
+        forward.setOnClickListener(this)
 
         registerBroadcast()
     }
 
     override fun onClick(v: View?) {
         when (v!!.id) {
-            R.id.loMiniPlayer -> {
-            }
-            R.id.btRewind -> // 이전 곡
+            R.id.rewind -> // 이전 곡
                 AudioApplication.getInstance().serviceInterface.rewind()
-            R.id.btPlayPause -> { // 재생 또는 일시 정지
+            R.id.playPause -> { // 재생 또는 일시 정지
                 //Toast.makeText(this, "Play or Pause", Toast.LENGTH_SHORT).show()
                 AudioApplication.getInstance().serviceInterface.togglePlay()
             }
-            R.id.btForward -> // 다음 곡
+            R.id.forward -> // 다음 곡
                 AudioApplication.getInstance().serviceInterface.forward()
         }
     }
@@ -149,10 +176,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, DataInterface {
             //Toast.makeText(this@MainActivity, intent.action, Toast.LENGTH_SHORT).show()
             when (intent.action) {
                 BroadcastActions.CREATED -> {
-                    getLocalData()
+                    loadVideos()
                 }
                 BroadcastActions.PREPARED -> {
-                    tvTitle.text = mVideos[mPlayingCount].displayName
+                    updateUI()
                 }
                 BroadcastActions.PLAY_STATE_CHANGED
                 -> {
@@ -175,65 +202,73 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, DataInterface {
         unregisterReceiver(mBroadcastReceiver)
     }
 
+    private fun loadVideos() {
+        val dataManager = DataManager(this)
+        val videos = dataManager.getVideoFiles()
+
+        mVideos.clear()
+        mVideos.addAll(videos)
+
+        startPlay()
+    }
+
     private fun startPlay() {
-        //AudioApplication.getInstance().getServiceInterface().setPlayList(getAudioIds()); // 재생목록등록
-
-        //Article article =  mArticles.get(mPlayingCount);
-        //Toast.makeText(MainActivity.this, article.getTitleKo(), Toast.LENGTH_SHORT).show();
-        //String mediaUri = article.getMediaUri();
-        val video: Video = mVideos[mPlayingCount]
-        Toast.makeText(this, video.displayName, Toast.LENGTH_SHORT).show()
-
-        //val uri = Uri.parse(video.contentUri)
-        AudioApplication.getInstance().serviceInterface.play(video.contentUri)
+        if (mVideos.size > 0) {
+            AudioApplication.getInstance().serviceInterface.setPlayList(mVideos) // 재생목록등록
+            AudioApplication.getInstance().serviceInterface.play(0)
+        }
     }
 
     private fun doShuffle() {
-        if (mArticles.size > 1) {
-            videoView.stopPlayback()
+        if (mVideos.size > 1) {
+            //videoView.stopPlayback()
             val seed = System.nanoTime()
-            mArticles.shuffle(Random(seed))
+            mVideos.shuffle(Random(seed))
             startPlay()
         }
     }
 
     private fun updateUI() {
+        //val isPlaying = AudioApplication.getInstance().serviceInterface.isPlaying
+        //Toast.makeText(this, "isPlaying: $isPlaying", Toast.LENGTH_SHORT).show()
         if (AudioApplication.getInstance().serviceInterface.isPlaying) {
-            btPlayPause.setImageResource(R.drawable.ic_pause)
+            playPause.setImageResource(R.drawable.ic_pause)
         } else {
-            btPlayPause.setImageResource(R.drawable.ic_play_arrow)
+            playPause.setImageResource(R.drawable.ic_play)
         }
 
-        //AudioAdapter.AudioItem audioItem = AudioApplication.getInstance().getServiceInterface().getAudioItem();
-        //if (audioItem != null) {
-        //    Uri albumArtUri = ContentUris.withAppendedId(Uri.parse("content://media/external/audio/albumart"), audioItem.mAlbumId);
-        //    Picasso.with(getApplicationContext()).load(albumArtUri).error(R.drawable.empty_albumart).into(mImgAlbumArt);
-        //    mTxtTitle.setText(audioItem.mTitle);
-        //} else {
-        //    mImgAlbumArt.setImageResource(R.drawable.empty_albumart);
-        //    mTxtTitle.setText("재생중인 음악이 없습니다.");
-        //}
-    }
+        mSavedPosition = AudioApplication.getInstance().serviceInterface.currentPosition
+        if (mVideos.size > 0) {
+            mSavedPosition += 1
+        }
+        val counter = mSavedPosition.toString() + " / " + mVideos.size
+        track.text = counter
 
-    private fun getLocalData() {
-        val dataManager = DataManager(this@MainActivity, this@MainActivity)
-        dataManager.getLocalData()
-    }
-
-    override fun getLocalDataCallback(videos: ArrayList<Video>) {
-        //Toast.makeText(this, "videos.size = " + videos.size, Toast.LENGTH_SHORT).show();
-        mVideos = videos
-        startPlay()
+        val video: Video? = AudioApplication.getInstance().serviceInterface.playingItem
+        if (video != null) {
+            Glide.with(this).load(video.thumbnail).into(albumArt)
+        } else {
+            albumArt.setImageResource(R.drawable.placeholder)
+        }
     }
 
     private fun goDownload() {
+        //AudioApplication.getInstance().serviceInterface.stop()
         val intent = Intent(this, ArticlesActivity::class.java)
-        startActivity(intent)
+        startActivityForResult(intent, Config.activityRequestCodeArticles)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == Config.activityRequestCodeArticles) {
+            if (resultCode == Activity.RESULT_OK) {
+                loadVideos()
+            }
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        //Toast.makeText(MainActivity.this, "onDestroy()", Toast.LENGTH_SHORT).show();
         unregisterBroadcast()
     }
 }

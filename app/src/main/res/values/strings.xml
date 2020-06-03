@@ -16,4 +16,9 @@
     <string name="title">제목</string>
     <string name="downloading">다운로드 중…</string>
     <string name="shuffle">Shuffle</string>
+    <string name="counter">Counter</string>
+    <string name="forward">Forward</string>
+    <string name="play_or_pause">Play or Pause</string>
+    <string name="rewind">Rewind</string>
+    <string name="track">Track</string>
 </resources>

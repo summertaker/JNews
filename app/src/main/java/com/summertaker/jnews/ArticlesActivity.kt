@@ -10,19 +10,17 @@ import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.DividerItemDecoration
+import com.android.volley.Request
+import com.android.volley.Response
+import com.android.volley.toolbox.StringRequest
 import kotlinx.android.synthetic.main.content_articles.*
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import org.json.JSONObject
 
 class ArticlesActivity : AppCompatActivity(), DataInterface, ArticlesInterface {
 
-    val logTag = Config.logPrefix + this.javaClass.simpleName
+    private val logTag = Config.logPrefix + this.javaClass.simpleName
 
-    var mVideos: ArrayList<Video> = ArrayList()
-    var mArticles: ArrayList<Article> = ArrayList()
-
-    private var mAdapter: ArticlesAdapter? = null
+    private var mArticles: ArrayList<Article> = ArrayList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,72 +34,27 @@ class ArticlesActivity : AppCompatActivity(), DataInterface, ArticlesInterface {
             actionBar.setDisplayHomeAsUpEnabled(true)
         }
 
-        getLocalData()
+        //mAdapter = ArticlesAdapter(this, mArticles)
+        recyclerView.adapter = ArticlesAdapter(this, mArticles)
+        recyclerView.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
+
+        if (isInternetConnected(this)) {
+            getRemoteData()
+        } else {
+            Toast.makeText(this, getString(R.string.no_internet_connection), Toast.LENGTH_SHORT)
+                .show()
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        //onBackPressed()
         finish()
         return true
     }
 
-    private fun getLocalData() {
-        val dataManager = DataManager(this@ArticlesActivity, this@ArticlesActivity)
-        dataManager.getLocalData()
-
-        /*
-        val dir = File(getExternalFilesDir(null), getString(R.string.japanese))
-        if (dir.isDirectory) {
-            val fs = dir.listFiles()
-            fs?.forEach {
-                Log.d(logTag, ">> ${it.name}")
-                val video = Video(it.toURI().toString(), it.path, it.name)
-                mVideos.add(video)
-            }
-        } else {
-            Log.e(logTag, getString(R.string.no_directory) + ": " + dir)
-        }
-        */
-
-        /*
-        val cursor = contentResolver.query(
-            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-            null,
-            null,
-            null,
-            MediaStore.Video.VideoColumns.DISPLAY_NAME
-        )
-
-        if (cursor == null) {
-            Log.e(logTag, ">> cursor is null.")
-        } else {
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
-            val relativePathColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Video.Media.RELATIVE_PATH)
-            val displayNameColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
-            while (cursor.moveToNext()) {
-                val id = cursor.getLong(idColumn)
-                val displayName = cursor.getString(displayNameColumn)
-                val relativePath = cursor.getString(relativePathColumn)
-                val ok = relativePath.contains(Config.localDownloadSubPath, ignoreCase = false)
-                if (ok) {
-                    val contentUri =
-                        Uri.withAppendedPath(
-                            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                            id.toString()
-                        )
-                    //Log.e(logTag, ">> $displayName")
-                    val video = Video(contentUri, relativePath, displayName)
-                    mVideos.add(video)
-                }
-            }
-            cursor.close()
-        }
-        */
-
-        getRemoteData()
-    }
+    //override fun onBackPressed() {
+    //    super.onBackPressed()
+    //    finish()
+    //}
 
     private fun isInternetConnected(context: Context): Boolean {
         var result = false
@@ -118,21 +71,63 @@ class ArticlesActivity : AppCompatActivity(), DataInterface, ArticlesInterface {
     }
 
     private fun getRemoteData() {
+        val stringRequest = StringRequest(Request.Method.GET, Config.remoteDataUrl,
+            Response.Listener { response ->
+                //Log.e(logTag, response)
+                val dataManager = DataManager(this)
+                val success = dataManager.saveFile(response)
+                if (success) {
+                    val videos = dataManager.getVideoFiles()
+                    val jsonObject = JSONObject(response)
+                    val jsonArray = jsonObject.getJSONArray("articles")
+                    for (i in 0 until jsonArray.length()) {
+                        val obj = jsonArray.getJSONObject(i)
+
+                        val file = obj.getString("file")
+                        if (file.isNullOrEmpty()) {
+                            continue
+                        }
+                        //Log.e(logTag, file) // upload/I6PxDCRxJEQ.mp4
+
+                        val fileName = file.substring(file.lastIndexOf('/') + 1)
+                        var displayName: String? = null
+                        for (video in videos) {
+                            if (fileName == video.displayName) {
+                                displayName = video.displayName.toString()
+                                break
+                            }
+                        }
+
+                        val article = Article(
+                            obj.getString("id"),
+                            obj.getString("yid"),
+                            obj.getString("title"),
+                            file,
+                            displayName
+                        )
+                        mArticles.add(article)
+                    }
+                    recyclerView.adapter?.notifyDataSetChanged()
+                }
+            },
+            Response.ErrorListener { error ->
+                Log.e(logTag, error.toString())
+            })
+        VolleySingleton.getInstance(this).addToRequestQueue(stringRequest)
+    }
+
+    /*private fun getRemoteData() {
         if (isInternetConnected(this)) {
             RetrofitFactory.getService().requestArticles(id = 0, title = "").enqueue(object :
                 Callback<ArticleModel> {
-                override fun onFailure(call: Call<ArticleModel>, t: Throwable) {
-                    Log.e(logTag, t.message.toString())
-                }
-
                 override fun onResponse(
                     call: Call<ArticleModel>,
                     response: Response<ArticleModel>
                 ) {
                     if (response.isSuccessful) {
-                        //Log.e(TAG, response.body().toString())
                         val body = response.body()
                         body?.let {
+                            //val success = saveFile(it.articles.toString())
                             for (article in it.articles) {
                                 if (article.file.isNullOrEmpty()) {
                                     continue
@@ -151,51 +146,70 @@ class ArticlesActivity : AppCompatActivity(), DataInterface, ArticlesInterface {
                             setAdapter(mArticles)
                         }
                     } else {
+                        Toast.makeText(mContext, "서버 응답 실패", Toast.LENGTH_SHORT).show()
                         Log.e(logTag, getString(R.string.response_failed))
                     }
+                }
+
+                override fun onFailure(call: Call<ArticleModel>, t: Throwable) {
+                    Toast.makeText(mContext, "서버 요청 실패: " + t.localizedMessage, Toast.LENGTH_SHORT)
+                        .show()
+                    Log.e(logTag, t.message.toString())
                 }
             })
         } else {
             Toast.makeText(this, getString(R.string.no_internet_connection), Toast.LENGTH_LONG)
                 .show()
         }
+    }*/
+
+    override fun getLocalDataCallback(videos: ArrayList<Video>) {
+        //mArticles.clear()
+        //mArticles.addAll(article)
     }
 
-    private fun setAdapter(articles: ArrayList<Article>) {
-        mAdapter = ArticlesAdapter(this, articles)
-        recyclerView.adapter = mAdapter
-        recyclerView.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
+    private fun setAdapter() {
+        //mAdapter = ArticlesAdapter(this, mArticles)
+        //recyclerView.adapter = mAdapter
+        //recyclerView.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
     }
 
     override fun onArticleSelected(article: Article) {
         //Toast.makeText(it.context, article.title, Toast.LENGTH_SHORT).show()
         val intent = Intent(this, DownloadActivity::class.java)
         intent.putExtra("id", article.id)
-        intent.putExtra("yid", article.yid)
         intent.putExtra("title", article.title)
         intent.putExtra("file", article.file)
-        startActivityForResult(intent, Config.requestCodeDownload)
+        startActivityForResult(intent, Config.activityRequestCodeDownload)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == Config.requestCodeDownload) {
+
+        if (requestCode == Config.activityRequestCodeDownload) {
             if (resultCode == Activity.RESULT_OK) {
                 val id = data?.getStringExtra("id")
-                val storageFile = data?.getStringExtra("storageFile")
-                if (storageFile != null) {
-                    mArticles.forEach {
-                        if (it.id == id) {
-                            it.storageFile = storageFile
+                val displayName = data?.getStringExtra("displayName")
+                //Toast.makeText(this, "displayName: $displayName", Toast.LENGTH_SHORT).show()
+
+                if (displayName != null) {
+                    for (article in mArticles) {
+                        if (article.id == id) {
+                            article.displayName = displayName
+                            break
                         }
                     }
-                    mAdapter?.notifyDataSetChanged()
+                    setResult(Activity.RESULT_OK)
+                    recyclerView.adapter?.notifyDataSetChanged()
                 }
             }
         }
     }
 
-    override fun getLocalDataCallback(videos: ArrayList<Video>) {
-        mVideos = videos
-    }
+    /*private fun doFinish() {
+        Toast.makeText(this, "mDataChanged: $mDataChanged", Toast.LENGTH_SHORT).show()
+        //val intent = Intent()
+        //intent.putExtra("dataChanged", mDataChanged)
+        finish()
+    }*/
 }

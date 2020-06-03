@@ -4,7 +4,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.net.Uri;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -31,29 +30,21 @@ public class AudioServiceInterface {
                 .setPackage(context.getPackageName()), mServiceConnection, Context.BIND_AUTO_CREATE);
     }
 
-    public void unbind(Context context) {
-        mServiceConnection = null;
-        mService = null;
-    }
-
-    public void setPlayList(ArrayList<Long> audioIds) {
+    /*public void setPlayList(ArrayList<Long> audioIds) {
         if (mService != null) {
             mService.setPlayList(audioIds);
+        }
+    }*/
+
+    public void setPlayList(ArrayList<Video> videos) {
+        if (mService != null) {
+            mService.setPlayList(videos);
         }
     }
 
     public void play(int position) {
         if (mService != null) {
             mService.play(position);
-        }
-    }
-
-    public void play(Uri uri) {
-        Log.e("TAG", ">> play()");
-        if (mService != null) {
-            mService.play(uri);
-        } else {
-            Log.e("TAG", ">> mService is null.");
         }
     }
 
@@ -65,7 +56,13 @@ public class AudioServiceInterface {
 
     public void pause() {
         if (mService != null) {
-            mService.play();
+            mService.pause();
+        }
+    }
+
+    public void stop() {
+        if (mService != null) {
+            mService.stop();
         }
     }
 
@@ -96,12 +93,18 @@ public class AudioServiceInterface {
         return false;
     }
 
-    /*
-    public AudioAdapter.AudioItem getAudioItem() {
+    public Video getPlayingItem() {
         if (mService != null) {
-            return mService.getAudioItem();
+            return mService.getPlayingItem();
         }
         return null;
     }
-    */
+
+    public int getCurrentPosition() {
+        if (mService != null) {
+            return mService.getCurrentPosition();
+        } else {
+            return 0;
+        }
+    }
 }
