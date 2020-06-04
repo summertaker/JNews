@@ -195,6 +195,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         mVideos.clear()
         mVideos.addAll(videos)
 
+        doShuffle()
         AudioApplication.getInstance().serviceInterface.playList = mVideos
         startPlay()
     }
@@ -208,7 +209,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             //videoView.stopPlayback()
             val seed = System.nanoTime()
             mVideos.shuffle(Random(seed))
-            startPlay()
+            //startPlay()
         }
     }
 
@@ -223,13 +224,13 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         if (mVideos.size > 0) {
             position += 1
         }
-        val trackText = position.toString() + " / " + mVideos.size
+        val trackText = position.toString() + "/" + mVideos.size
         track.text = trackText
 
         if (AudioApplication.getInstance().serviceInterface.isPlaying) {
-            playPause.setImageResource(R.drawable.ic_pause)
+            ivPlayPause.setImageResource(R.drawable.ic_pause)
         } else {
-            playPause.setImageResource(R.drawable.ic_play)
+            ivPlayPause.setImageResource(R.drawable.ic_play)
         }
 
         if (video != null) {

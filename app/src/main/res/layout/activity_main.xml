@@ -46,59 +46,86 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/track"
+            android:layout_marginStart="5dp"
+            android:gravity="center"
             android:textColor="@android:color/black"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/rewind"
             app:layout_constraintStart_toEndOf="@+id/albumArt"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <ImageButton
+        <LinearLayout
             android:id="@+id/rewind"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:contentDescription="@string/rewind"
-            android:src="@drawable/ic_rewind"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:gravity="center"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/playPause"
             app:layout_constraintStart_toEndOf="@+id/track"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent">
 
-        <ImageButton
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:contentDescription="@string/rewind"
+                android:src="@drawable/ic_rewind" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/playPause"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:contentDescription="@string/play_or_pause"
-            android:src="@drawable/ic_play"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:gravity="center"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/forward"
             app:layout_constraintStart_toEndOf="@+id/rewind"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent">
 
-        <ImageButton
+            <ImageView
+                android:id="@+id/ivPlayPause"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:contentDescription="@string/play_or_pause"
+                android:src="@drawable/ic_play" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/forward"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:contentDescription="@string/forward"
-            android:src="@drawable/ic_forward"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:gravity="center"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/download"
             app:layout_constraintStart_toEndOf="@+id/playPause"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent">
 
-        <ImageButton
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:contentDescription="@string/forward"
+                android:src="@drawable/ic_forward" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/download"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?attr/selectableItemBackground"
-            android:contentDescription="@string/forward"
-            android:src="@drawable/ic_downward"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:gravity="center"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/forward"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:contentDescription="@string/forward"
+                android:src="@drawable/ic_downward" />
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

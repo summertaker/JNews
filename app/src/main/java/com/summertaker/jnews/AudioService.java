@@ -6,8 +6,6 @@ import android.media.MediaPlayer;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.PowerManager;
-import android.util.Log;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 
@@ -122,10 +120,8 @@ public class AudioService extends Service {
             //mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
             if (mVideos.size() > 0) {
                 Video video = mVideos.get(mCurrentPosition);
-                if (video.getContentUri() != null) {
-                    mMediaPlayer.setDataSource(getApplicationContext(), video.getContentUri());
-                    mMediaPlayer.prepareAsync();
-                }
+                mMediaPlayer.setDataSource(getApplicationContext(), video.getContentUri());
+                mMediaPlayer.prepareAsync();
             }
         } catch (Exception e) {
             e.printStackTrace();

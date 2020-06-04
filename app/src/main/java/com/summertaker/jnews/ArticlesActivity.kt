@@ -34,16 +34,18 @@ class ArticlesActivity : AppCompatActivity(), DataInterface, ArticlesInterface {
             actionBar.setDisplayHomeAsUpEnabled(true)
         }
 
+        //swipeRefresh.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(this, R.color.colorPrimary))
+        //swipeRefresh.setColorSchemeColors(Color.WHITE)
+        swipeRefresh.setOnRefreshListener {
+            mArticles.clear()
+            getRemoteData()
+        }
+
         //mAdapter = ArticlesAdapter(this, mArticles)
         recyclerView.adapter = ArticlesAdapter(this, mArticles)
         recyclerView.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
 
-        if (isInternetConnected(this)) {
-            getRemoteData()
-        } else {
-            Toast.makeText(this, getString(R.string.no_internet_connection), Toast.LENGTH_SHORT)
-                .show()
-        }
+        getRemoteData()
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -71,49 +73,56 @@ class ArticlesActivity : AppCompatActivity(), DataInterface, ArticlesInterface {
     }
 
     private fun getRemoteData() {
-        val stringRequest = StringRequest(Request.Method.GET, Config.remoteDataUrl,
-            Response.Listener { response ->
-                //Log.e(logTag, ">> Response.Listener: $response")
-                val dataManager = DataManager(this)
-                val success = dataManager.saveFile(response)
-                if (success) {
-                    val videos = dataManager.getVideoFiles()
-                    val jsonObject = JSONObject(response)
-                    val jsonArray = jsonObject.getJSONArray("articles")
-                    for (i in 0 until jsonArray.length()) {
-                        val obj = jsonArray.getJSONObject(i)
+        if (isInternetConnected(this)) {
+            val stringRequest = StringRequest(Request.Method.GET, Config.remoteDataUrl,
+                Response.Listener { response ->
+                    //Log.e(logTag, ">> Response.Listener: $response")
+                    val dataManager = DataManager(this)
+                    val success = dataManager.saveFile(response)
+                    if (success) {
+                        mArticles.clear()
+                        val videos = dataManager.getVideoFiles()
+                        val jsonObject = JSONObject(response)
+                        val jsonArray = jsonObject.getJSONArray("articles")
+                        for (i in 0 until jsonArray.length()) {
+                            val obj = jsonArray.getJSONObject(i)
 
-                        val file = obj.getString("file")
-                        if (file.isNullOrEmpty()) {
-                            continue
-                        }
-                        //Log.e(logTag, file) // upload/I6PxDCRxJEQ.mp4
-
-                        val fileName = file.substring(file.lastIndexOf('/') + 1)
-                        var displayName: String? = null
-                        for (video in videos) {
-                            if (fileName == video.displayName) {
-                                displayName = video.displayName.toString()
-                                break
+                            val file = obj.getString("file")
+                            if (file.isNullOrEmpty()) {
+                                continue
                             }
-                        }
+                            //Log.e(logTag, file) // upload/I6PxDCRxJEQ.mp4
 
-                        val article = Article(
-                            obj.getString("id"),
-                            obj.getString("yid"),
-                            obj.getString("title"),
-                            file,
-                            displayName
-                        )
-                        mArticles.add(article)
+                            val fileName = file.substring(file.lastIndexOf('/') + 1)
+                            var displayName: String? = null
+                            for (video in videos) {
+                                if (fileName == video.displayName) {
+                                    displayName = video.displayName
+                                    break
+                                }
+                            }
+
+                            val article = Article(
+                                obj.getString("id"),
+                                obj.getString("yid"),
+                                obj.getString("title"),
+                                file,
+                                displayName
+                            )
+                            mArticles.add(article)
+                        }
+                        recyclerView.adapter?.notifyDataSetChanged()
+                        swipeRefresh.isRefreshing = false
                     }
-                    recyclerView.adapter?.notifyDataSetChanged()
-                }
-            },
-            Response.ErrorListener { error ->
-                Log.e(logTag, error.toString())
-            })
-        VolleySingleton.getInstance(this).addToRequestQueue(stringRequest)
+                },
+                Response.ErrorListener { error ->
+                    Log.e(logTag, error.toString())
+                })
+            VolleySingleton.getInstance(this).addToRequestQueue(stringRequest)
+        } else {
+            Toast.makeText(this, getString(R.string.no_internet_connection), Toast.LENGTH_SHORT)
+                .show()
+        }
     }
 
     /*private fun getRemoteData() {
@@ -166,12 +175,6 @@ class ArticlesActivity : AppCompatActivity(), DataInterface, ArticlesInterface {
     override fun getLocalDataCallback(videos: ArrayList<Video>) {
         //mArticles.clear()
         //mArticles.addAll(article)
-    }
-
-    private fun setAdapter() {
-        //mAdapter = ArticlesAdapter(this, mArticles)
-        //recyclerView.adapter = mAdapter
-        //recyclerView.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
     }
 
     override fun onArticleSelected(article: Article) {
