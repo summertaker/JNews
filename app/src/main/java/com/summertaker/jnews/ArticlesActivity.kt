@@ -73,7 +73,7 @@ class ArticlesActivity : AppCompatActivity(), DataInterface, ArticlesInterface {
     private fun getRemoteData() {
         val stringRequest = StringRequest(Request.Method.GET, Config.remoteDataUrl,
             Response.Listener { response ->
-                //Log.e(logTag, response)
+                //Log.e(logTag, ">> Response.Listener: $response")
                 val dataManager = DataManager(this)
                 val success = dataManager.saveFile(response)
                 if (success) {

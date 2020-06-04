@@ -1,7 +1,6 @@
 package com.summertaker.jnews
 
 import android.Manifest
-import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -11,7 +10,6 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.MediaController
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -23,44 +21,19 @@ import kotlin.collections.ArrayList
 
 class MainActivity : AppCompatActivity(), View.OnClickListener {
 
-    //private val logTag = Config.logPrefix + this.javaClass.simpleName
-
-    private val mContext: Context = this
-
-    private var mSavedPosition = 0
-    private val mSavedPositionKey = "playingPositionKey"
+    //private val mContext: Context = this
 
     private val permissionRequestCode = 1000
 
     private var mVideos: ArrayList<Video> = ArrayList()
-    private var mArticles: ArrayList<Article> = ArrayList()
 
-    private var mMediaController: MediaController? = null
-    private var mPlayingCount = 0
+    //private var mMediaController: MediaController? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // https://developer.android.com/guide/components/activities/activity-lifecycle?hl=ko
-        if (savedInstanceState != null) {
-            mSavedPosition = savedInstanceState.getInt(mSavedPositionKey, 0)
-        }
-
         setContentView(R.layout.activity_main)
         checkPermissions()
-    }
-
-    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
-        //Toast.makeText(this, "mSavedPosition: $mSavedPosition", Toast.LENGTH_SHORT).show()
-        mSavedPosition = savedInstanceState.getInt(mSavedPositionKey, 0)
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        //Toast.makeText(this, "mSavedPosition: $mSavedPosition", Toast.LENGTH_SHORT).show()
-        outState.run {
-            putInt(mSavedPositionKey, mSavedPosition)
-        }
-        super.onSaveInstanceState(outState)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -85,7 +58,14 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     override fun onResume() {
         super.onResume()
-        updateUI()
+
+        val videos = AudioApplication.getInstance().serviceInterface.playList
+        if (videos != null) {
+            //Log.e(">>", "not null. " + AudioApplication.getInstance().serviceInterface.playList.size)
+            mVideos.clear()
+            mVideos.addAll(videos)
+            updateUI()
+        }
     }
 
     private fun checkPermissions() {
@@ -125,8 +105,23 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         }
     }
 
+    override fun onClick(v: View?) {
+        when (v!!.id) {
+            R.id.rewind ->
+                AudioApplication.getInstance().serviceInterface.rewind()
+            R.id.playPause -> {
+                //Toast.makeText(this, "Play or Pause", Toast.LENGTH_SHORT).show()
+                AudioApplication.getInstance().serviceInterface.togglePlay()
+            }
+            R.id.forward ->
+                AudioApplication.getInstance().serviceInterface.forward()
+            R.id.download ->
+                goDownload()
+        }
+    }
+
     private fun initUI() {
-        mMediaController = MediaController(this)
+        //mMediaController = MediaController(this)
 
         /*videoView.setMediaController(mMediaController)
         videoView.setOnPreparedListener {
@@ -154,31 +149,21 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         rewind.setOnClickListener(this)
         playPause.setOnClickListener(this)
         forward.setOnClickListener(this)
+        download.setOnClickListener(this)
 
         registerBroadcast()
     }
 
-    override fun onClick(v: View?) {
-        when (v!!.id) {
-            R.id.rewind -> // 이전 곡
-                AudioApplication.getInstance().serviceInterface.rewind()
-            R.id.playPause -> { // 재생 또는 일시 정지
-                //Toast.makeText(this, "Play or Pause", Toast.LENGTH_SHORT).show()
-                AudioApplication.getInstance().serviceInterface.togglePlay()
-            }
-            R.id.forward -> // 다음 곡
-                AudioApplication.getInstance().serviceInterface.forward()
-        }
-    }
-
     private val mBroadcastReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            //Toast.makeText(this@MainActivity, intent.action, Toast.LENGTH_SHORT).show()
+            //Toast.makeText(this, intent.action, Toast.LENGTH_SHORT).show()
             when (intent.action) {
                 BroadcastActions.CREATED -> {
+                    //Toast.makeText(mContext, intent.action, Toast.LENGTH_SHORT).show()
                     loadVideos()
                 }
                 BroadcastActions.PREPARED -> {
+                    //Log.e(logTag, ">> BroadcastActions.PREPARED")
                     updateUI()
                 }
                 BroadcastActions.PLAY_STATE_CHANGED
@@ -200,6 +185,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private fun unregisterBroadcast() {
         unregisterReceiver(mBroadcastReceiver)
+        //Log.e(logTag, ">> unregisterBroadcast: $mBroadcastReceiver")
     }
 
     private fun loadVideos() {
@@ -209,14 +195,12 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         mVideos.clear()
         mVideos.addAll(videos)
 
+        AudioApplication.getInstance().serviceInterface.playList = mVideos
         startPlay()
     }
 
     private fun startPlay() {
-        if (mVideos.size > 0) {
-            AudioApplication.getInstance().serviceInterface.setPlayList(mVideos) // 재생목록등록
-            AudioApplication.getInstance().serviceInterface.play(0)
-        }
+        AudioApplication.getInstance().serviceInterface.play(0)
     }
 
     private fun doShuffle() {
@@ -229,46 +213,55 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun updateUI() {
-        //val isPlaying = AudioApplication.getInstance().serviceInterface.isPlaying
-        //Toast.makeText(this, "isPlaying: $isPlaying", Toast.LENGTH_SHORT).show()
+        val video: Video? = AudioApplication.getInstance().serviceInterface.playingItem
+        if (video != null) {
+            Glide.with(this).load(video.thumbnail).into(albumArt)
+        }
+        //albumArt.setImageResource(R.drawable.placeholder)
+
+        var position = AudioApplication.getInstance().serviceInterface.currentPosition
+        if (mVideos.size > 0) {
+            position += 1
+        }
+        val trackText = position.toString() + " / " + mVideos.size
+        track.text = trackText
+
         if (AudioApplication.getInstance().serviceInterface.isPlaying) {
             playPause.setImageResource(R.drawable.ic_pause)
         } else {
             playPause.setImageResource(R.drawable.ic_play)
         }
 
-        mSavedPosition = AudioApplication.getInstance().serviceInterface.currentPosition
-        if (mVideos.size > 0) {
-            mSavedPosition += 1
-        }
-        val counter = mSavedPosition.toString() + " / " + mVideos.size
-        track.text = counter
-
-        val video: Video? = AudioApplication.getInstance().serviceInterface.playingItem
         if (video != null) {
-            Glide.with(this).load(video.thumbnail).into(albumArt)
-        } else {
-            albumArt.setImageResource(R.drawable.placeholder)
+            val html =
+                video.style + video.furigana + "<hr>" + video.korean + "<hr>" + video.japanese
+            webView.loadDataWithBaseURL("", html, "text/html", "UTF-8", "")
         }
     }
 
     private fun goDownload() {
-        //AudioApplication.getInstance().serviceInterface.stop()
+        AudioApplication.getInstance().serviceInterface.stop()
+
         val intent = Intent(this, ArticlesActivity::class.java)
         startActivityForResult(intent, Config.activityRequestCodeArticles)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == Config.activityRequestCodeArticles) {
-            if (resultCode == Activity.RESULT_OK) {
-                loadVideos()
-            }
-        }
+        //if (requestCode == Config.activityRequestCodeArticles) {
+        //    if (resultCode == Activity.RESULT_OK) {
+        //        loadVideos()
+        //    }
+        //}
+        loadVideos()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        //AudioApplication.getInstance().serviceInterface.unbindService()
+        //if (AudioApplication.getInstance().serviceInterface.isPlaying) {
+        //    AudioApplication.getInstance().serviceInterface.stop()
+        //}
         unregisterBroadcast()
     }
 }

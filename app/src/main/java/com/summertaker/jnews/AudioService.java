@@ -3,14 +3,12 @@ package com.summertaker.jnews;
 import android.app.Service;
 import android.content.Intent;
 import android.media.MediaPlayer;
-import android.net.Uri;
 import android.os.Binder;
-import android.os.Environment;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
+import android.widget.Toast;
 
-import java.io.File;
 import java.util.ArrayList;
 
 public class AudioService extends Service {
@@ -66,6 +64,7 @@ public class AudioService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        //Log.e(">>", "AudioService.onDestroy()");
         if (mMediaPlayer != null) {
             mMediaPlayer.stop();
             mMediaPlayer.release();
@@ -105,6 +104,10 @@ public class AudioService extends Service {
         }
     }*/
 
+    public ArrayList<Video> getPlayList() {
+        return mVideos;
+    }
+
     public void setPlayList(ArrayList<Video> videos) {
         //if (!mVideos.equals(videos)) {
         mVideos.clear();
@@ -130,12 +133,14 @@ public class AudioService extends Service {
     }
 
     public void play(int position) {
-        //queryAudioItem(position);
-        mCurrentPosition = position;
-        if (isPlaying()) {
-            stop();
+        if (mVideos.size() > 0) {
+            //queryAudioItem(position);
+            mCurrentPosition = position;
+            if (isPlaying()) {
+                stop();
+            }
+            prepare();
         }
-        prepare();
     }
 
     public void play() {
@@ -143,6 +148,8 @@ public class AudioService extends Service {
             mMediaPlayer.start();
             sendBroadcast(new Intent(BroadcastActions.PLAY_STATE_CHANGED)); // 재생상태 변경 전송
             //updateNotificationPlayer();
+        } else {
+            play(0);
         }
     }
 

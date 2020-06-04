@@ -6,35 +6,57 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
 public class AudioServiceInterface {
     private ServiceConnection mServiceConnection;
     private AudioService mService;
+    private Context mContext;
 
     public AudioServiceInterface(Context context) {
+        mContext = context;
+
         mServiceConnection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
                 mService = ((AudioService.AudioServiceBinder) service).getService();
+                //Log.e(">>", "AudioServiceInterface.onServiceConnected()");
             }
 
             @Override
             public void onServiceDisconnected(ComponentName name) {
                 mServiceConnection = null;
                 mService = null;
+                //Log.e(">>", "AudioServiceInterface.onServiceDisconnected()");
             }
         };
         context.bindService(new Intent(context, AudioService.class)
                 .setPackage(context.getPackageName()), mServiceConnection, Context.BIND_AUTO_CREATE);
     }
 
+    //public void unbindService() {
+    //    if (mServiceConnection != null) {
+    //        mContext.unbindService(mServiceConnection);
+    //        mServiceConnection = null;
+    //        mService = null;
+    //   }
+    //}
+
     /*public void setPlayList(ArrayList<Long> audioIds) {
         if (mService != null) {
             mService.setPlayList(audioIds);
         }
     }*/
+
+    public ArrayList<Video> getPlayList() {
+        if (mService != null) {
+            return mService.getPlayList();
+        } else {
+            return null;
+        }
+    }
 
     public void setPlayList(ArrayList<Video> videos) {
         if (mService != null) {
@@ -45,20 +67,22 @@ public class AudioServiceInterface {
     public void play(int position) {
         if (mService != null) {
             mService.play(position);
+        } else {
+            Toast.makeText(mContext, "mService is null.", Toast.LENGTH_SHORT).show();
         }
     }
 
-    public void play() {
-        if (mService != null) {
-            mService.play();
-        }
-    }
+    //public void play() {
+    //    if (mService != null) {
+    //        mService.play();
+    //    }
+    //}
 
-    public void pause() {
-        if (mService != null) {
-            mService.pause();
-        }
-    }
+    //public void pause() {
+    //    if (mService != null) {
+    //        mService.pause();
+    //    }
+    //}
 
     public void stop() {
         if (mService != null) {
@@ -82,7 +106,9 @@ public class AudioServiceInterface {
         if (isPlaying()) {
             mService.pause();
         } else {
-            mService.play();
+            if (mService != null) {
+                mService.play();
+            }
         }
     }
 
